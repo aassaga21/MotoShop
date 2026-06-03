@@ -338,6 +338,199 @@ kubectl rollout status deployment/backend -n ecommerce
 
 ---
 
+## Pipeline CI/CD
+
+À chaque `git push` sur `main`, le pipeline GitHub Actions :
+
+1. **Détecte** quels dossiers ont changé (`backend/`, `frontend/`, `k8s/`)
+2. **Build et push** uniquement les images Docker concernées sur Docker Hub
+3. **Déploie** sur Kubernetes (apply manifests + rollout restart)
+4. **Recharge MongoDB** automatiquement si `backend/` a changé (vide la collection `products` → Flask re-seed au redémarrage)
+
+```
+git push → GitHub Actions
+              ├── backend/ modifié ?  → build moto-backend:latest → push Docker Hub
+              │                          → kubectl rollout restart backend
+              │                          → drop products → restart → re-seed auto
+              ├── frontend/ modifié ? → build moto-frontend:latest → push Docker Hub
+              │                          → kubectl rollout restart frontend
+              └── k8s/ modifié ?      → kubectl apply -f k8s/
+```
+
+### Alternative locale : script PowerShell + hook git
+
+Puisque Kubernetes tourne en local (Docker Desktop), le pipeline peut fonctionner **sans GitHub Actions** grâce à deux fichiers dans `scripts/` :
+
+| Fichier | Rôle |
+|---------|------|
+| `scripts/deploy.ps1` | Script principal : détecte les changements, build, push, déploie, recharge MongoDB |
+| `scripts/install-hook.ps1` | Installe un hook git qui déclenche `deploy.ps1` automatiquement à chaque `git push` |
+
+#### Ce que fait `deploy.ps1`
+
+```
+git push
+  └── hook pre-push → deploy.ps1
+        ├── Détecte quels dossiers ont changé (git diff)
+        ├── backend/ modifié ?  → docker build + push → kubectl restart → reseed MongoDB
+        ├── frontend/ modifié ? → docker build + push → kubectl restart
+        └── k8s/ modifié ?      → kubectl apply -f k8s/
+```
+
+#### Installation (une seule fois)
+
+Ouvre **PowerShell** dans le dossier du projet et exécute :
+
+```powershell
+cd C:\Users\alexa\k8s-demo
+.\scripts\install-hook.ps1
+```
+
+Tu verras :
+```
+Hook pre-push installé avec succès !
+
+Désormais, chaque 'git push' déclenchera automatiquement :
+  - Build et push des images Docker modifiées
+  - Déploiement sur Kubernetes
+  - Rechargement MongoDB si le backend a changé
+```
+
+**Vérifier que le hook est bien installé :**
+
+```powershell
+Test-Path .git\hooks\pre-push
+# doit afficher : True
+```
+
+> **Erreur rencontrée** : si tu vois `Impossible de trouver une partie du chemin '.git\hooks\pre-push'`, c'est que le dossier `.git\hooks\` n'existait pas.
+> Le script `install-hook.ps1` a été corrigé pour le créer automatiquement — il suffit de le relancer.
+
+#### Utilisation quotidienne
+
+Après installation, le workflow est simplement :
+
+```bash
+# 1. Modifier des fichiers (backend, frontend, k8s...)
+
+# 2. Commiter
+git add .
+git commit -m "ma modification"
+
+# 3. Pousser → le déploiement se déclenche AUTOMATIQUEMENT
+git push
+```
+
+Le script affiche la progression en temps réel dans le terminal :
+
+```
+======================================
+  MotoShop - Deploiement automatique
+======================================
+
+Changements détectés :
+  Backend  : OUI
+  Frontend : non
+  K8s      : non
+
+[BACKEND] Build de l'image Docker...
+[BACKEND] Image pushée sur Docker Hub  ✓
+[K8S] Redémarrage du backend...
+[MONGODB] Rechargement de la base de données...
+[MONGODB] Base de données rechargée  ✓
+
+======================================
+       Deploiement terminé  ✓
+======================================
+
+Site disponible sur : http://localhost:30080
+```
+
+#### Déploiement manuel (sans git push)
+
+```powershell
+# Déployer uniquement ce qui a changé
+.\scripts\deploy.ps1
+
+# Forcer le déploiement complet (tout rebuilder)
+.\scripts\deploy.ps1 -Force
+```
+
+#### Désactiver le hook
+
+```powershell
+Remove-Item .git\hooks\pre-push
+```
+
+### Runner GitHub Actions (optionnel)
+
+Si tu veux aussi que le pipeline tourne **sur GitHub** (visible dans l'onglet Actions), tu peux configurer un runner auto-hébergé :
+
+**https://github.com/aassaga21/MotoShop/settings/actions/runners/new?arch=x64&os=win**
+
+Et créer les secrets Docker Hub :
+
+| Nom du secret      | Valeur                      |
+|--------------------|-----------------------------|
+| `DOCKER_USERNAME`  | `alexandraassaga`           |
+| `DOCKER_PASSWORD`  | ton mot de passe Docker Hub |
+
+Le fichier `.github/workflows/deploy.yml` est déjà prêt dans le repo.
+
+### Ce que fait chaque étape
+
+| Étape            | Se déclenche si…          | Actions                                                        |
+|------------------|---------------------------|----------------------------------------------------------------|
+| Détection        | Toujours                  | `git diff` pour savoir quoi rebuild                            |
+| Build backend    | `backend/` modifié        | `docker build` + `docker push` moto-backend:latest             |
+| Build frontend   | `frontend/` modifié       | `docker build` + `docker push` moto-frontend:latest            |
+| Deploy k8s       | `k8s/` modifié            | `kubectl apply -f k8s/`                                        |
+| Restart + reseed | `backend/` modifié        | `rollout restart` + drop products + restart (re-seed auto)     |
+
+---
+
+## Dépôt GitHub
+
+Le code source est hébergé sur : **https://github.com/aassaga21/MotoShop**
+
+### Premier push (initialisation)
+
+```bash
+# Lier le repo GitHub
+git remote add origin https://github.com/aassaga21/MotoShop.git
+
+# Ajouter tous les fichiers (.gitignore exclut node_modules automatiquement)
+git add .
+
+# Créer le commit initial
+git commit -m "Ajout pages Contact & Admin, images motos, navigation"
+
+# Pousser sur GitHub
+git push -u origin main
+```
+
+> Si GitHub demande un mot de passe, utilise un **Personal Access Token** :
+> GitHub → Settings → Developer settings → Personal access tokens → Generate new token (cocher `repo`)
+
+### Mettre à jour le repo après chaque modification
+
+```bash
+git add .
+git commit -m "description de la modification"
+git push
+```
+
+### Fichiers exclus du dépôt (`.gitignore`)
+
+| Dossier / Fichier         | Raison                                   |
+|---------------------------|------------------------------------------|
+| `frontend/node_modules/`  | Trop lourd, se réinstalle avec `npm install` |
+| `frontend/dist/`          | Build généré automatiquement par Vite    |
+| `__pycache__/`, `*.pyc`   | Fichiers compilés Python temporaires     |
+| `.env`, `.env.local`      | Variables sensibles (mots de passe)      |
+
+---
+
 ## Génération des Secrets
 
 ```bash

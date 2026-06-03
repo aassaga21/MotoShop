@@ -1,0 +1,180 @@
+name: CI/CD — MotoShop
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:           # déclenchement manuel depuis GitHub
+
+env:
+  DOCKER_USER: alexandraassaga
+  NAMESPACE:   ecommerce
+
+# ─────────────────────────────────────────────────────────────────────────────
+jobs:
+
+  # ── Job 1 : Détecter quels dossiers ont changé ──────────────────────────
+  changes:
+    name: Détecter les changements
+    runs-on: self-hosted
+    outputs:
+      backend:  ${{ steps.filter.outputs.backend }}
+      frontend: ${{ steps.filter.outputs.frontend }}
+      k8s:      ${{ steps.filter.outputs.k8s }}
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+
+      - name: Analyser les fichiers modifiés
+        id: filter
+        shell: bash
+        run: |
+          # Premier commit : tout déployer
+          if ! git rev-parse HEAD~1 >/dev/null 2>&1; then
+            echo "Premier commit — déploiement complet"
+            echo "backend=true"  >> $GITHUB_OUTPUT
+            echo "frontend=true" >> $GITHUB_OUTPUT
+            echo "k8s=true"      >> $GITHUB_OUTPUT
+            exit 0
+          fi
+
+          CHANGED=$(git diff --name-only HEAD~1 HEAD)
+          echo "Fichiers modifiés :"
+          echo "$CHANGED"
+
+          echo "$CHANGED" | grep -q '^backend/'  \
+            && echo "backend=true"  >> $GITHUB_OUTPUT \
+            || echo "backend=false" >> $GITHUB_OUTPUT
+
+          echo "$CHANGED" | grep -q '^frontend/' \
+            && echo "frontend=true" >> $GITHUB_OUTPUT \
+            || echo "frontend=false" >> $GITHUB_OUTPUT
+
+          echo "$CHANGED" | grep -q '^k8s/'      \
+            && echo "k8s=true"      >> $GITHUB_OUTPUT \
+            || echo "k8s=false"     >> $GITHUB_OUTPUT
+
+  # ── Job 2 : Build & Push image Backend ──────────────────────────────────
+  build-backend:
+    name: Build & Push — Backend
+    needs: changes
+    if: needs.changes.outputs.backend == 'true'
+    runs-on: self-hosted
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Connexion Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: Build et push image backend
+        uses: docker/build-push-action@v5
+        with:
+          context: ./backend
+          push: true
+          tags: |
+            ${{ env.DOCKER_USER }}/moto-backend:latest
+            ${{ env.DOCKER_USER }}/moto-backend:${{ github.sha }}
+
+  # ── Job 3 : Build & Push image Frontend ─────────────────────────────────
+  build-frontend:
+    name: Build & Push — Frontend
+    needs: changes
+    if: needs.changes.outputs.frontend == 'true'
+    runs-on: self-hosted
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Connexion Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: Build et push image frontend
+        uses: docker/build-push-action@v5
+        with:
+          context: ./frontend
+          push: true
+          tags: |
+            ${{ env.DOCKER_USER }}/moto-frontend:latest
+            ${{ env.DOCKER_USER }}/moto-frontend:${{ github.sha }}
+
+  # ── Job 4 : Déploiement Kubernetes + rechargement MongoDB ───────────────
+  deploy:
+    name: Déployer sur Kubernetes
+    needs: [changes, build-backend, build-frontend]
+    if: |
+      always() &&
+      (needs.build-backend.result  == 'success' || needs.build-backend.result  == 'skipped') &&
+      (needs.build-frontend.result == 'success' || needs.build-frontend.result == 'skipped')
+    runs-on: self-hosted
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # ── Manifests k8s (si k8s/ a changé) ──────────────────────────────
+      - name: Appliquer les manifests Kubernetes
+        if: needs.changes.outputs.k8s == 'true'
+        shell: bash
+        run: |
+          kubectl apply -f k8s/
+          echo "✓ Manifests Kubernetes appliqués"
+
+      # ── Redémarrage Backend ────────────────────────────────────────────
+      - name: Redémarrer le backend
+        if: needs.changes.outputs.backend == 'true'
+        shell: bash
+        run: |
+          kubectl rollout restart deployment/backend -n ${{ env.NAMESPACE }}
+          kubectl rollout status  deployment/backend -n ${{ env.NAMESPACE }} --timeout=120s
+
+      # ── Rechargement MongoDB ───────────────────────────────────────────
+      # On vide la collection products puis on redémarre Flask
+      # Flask détecte la collection vide et re-seed automatiquement via SEED_PRODUCTS
+      - name: Recharger MongoDB — vider et re-seed les produits
+        if: needs.changes.outputs.backend == 'true'
+        shell: bash
+        run: |
+          echo "Attente que le backend soit prêt..."
+          kubectl wait pod -n ${{ env.NAMESPACE }} -l app=backend \
+            --for=condition=Ready --timeout=120s
+
+          echo "Suppression de la collection produits..."
+          kubectl exec -n ${{ env.NAMESPACE }} deployment/backend -c flask -- \
+            python3 -c "
+          import os
+          from pymongo import MongoClient
+          user = os.environ['MONGO_USERNAME']
+          pwd  = os.environ['MONGO_PASSWORD']
+          host = os.environ.get('MONGO_HOST', 'localhost')
+          client = MongoClient(f'mongodb://{user}:{pwd}@{host}:27017/ecommerce?authSource=admin')
+          result = client.ecommerce.products.drop()
+          print('Collection products vidée — re-seed au prochain démarrage')
+          "
+
+          echo "Redémarrage pour déclencher le re-seed..."
+          kubectl rollout restart deployment/backend -n ${{ env.NAMESPACE }}
+          kubectl rollout status  deployment/backend -n ${{ env.NAMESPACE }} --timeout=120s
+
+      # ── Redémarrage Frontend ───────────────────────────────────────────
+      - name: Redémarrer le frontend
+        if: needs.changes.outputs.frontend == 'true'
+        shell: bash
+        run: |
+          kubectl rollout restart deployment/frontend -n ${{ env.NAMESPACE }}
+          kubectl rollout status  deployment/frontend -n ${{ env.NAMESPACE }} --timeout=60s
+
+      # ── Résumé final ───────────────────────────────────────────────────
+      - name: État final des pods
+        shell: bash
+        run: |
+          echo "=============================="
+          echo "  Déploiement terminé ✓"
+          echo "=============================="
+          kubectl get pods -n ${{ env.NAMESPACE }}
