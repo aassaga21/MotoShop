@@ -1,0 +1,9 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: app-config
+  namespace: ecommerce
+data:
+  DB_NAME: ecommerce
+  MONGO_HOST: localhost       # MongoDB est dans le même Pod que Flask
+  FLASK_ENV: production

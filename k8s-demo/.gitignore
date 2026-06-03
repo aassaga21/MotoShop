@@ -1,0 +1,25 @@
+# Dépendances
+frontend/node_modules/
+__pycache__/
+*.pyc
+*.pyo
+
+# Build Vite
+frontend/dist/
+
+# Variables d'environnement
+.env
+.env.local
+.env.*.local
+
+# Logs
+*.log
+npm-debug.log*
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/settings.json
+.idea/

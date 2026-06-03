@@ -1,0 +1,11 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: flask-pod
+spec:
+  containers:
+  - name: flask-app
+    image: flask-k8s:v1
+    imagePullPolicy: Never
+    ports:
+    - containerPort: 5000
