@@ -178,3 +178,8 @@ jobs:
           echo "  Déploiement terminé ✓"
           echo "=============================="
           kubectl get pods -n ${{ env.NAMESPACE }}
+          echo ""
+          echo "=== Pod Monitoring ==="
+          kubectl get pod monitoring-pod -n ${{ env.NAMESPACE }} 2>/dev/null \
+            && echo "✓ monitoring-pod présent" \
+            || echo "ℹ monitoring-pod non encore déployé (kubectl apply -f k8s/monitoring-*.yaml)"

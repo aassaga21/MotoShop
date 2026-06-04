@@ -1,0 +1,915 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>MotoShop — Soutenance DevOps</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/5.1.0/reveal.min.css"/>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/5.1.0/theme/black.min.css"/>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"/>
+<style>
+  :root {
+    --blue:   #3b82f6;
+    --purple: #8b5cf6;
+    --cyan:   #06b6d4;
+    --green:  #10b981;
+    --orange: #f59e0b;
+    --red:    #ef4444;
+    --dark:   #0f172a;
+    --card:   #1e293b;
+    --border: #334155;
+    --text:   #f1f5f9;
+    --muted:  #94a3b8;
+  }
+
+  .reveal { background: var(--dark); font-family: 'Segoe UI', sans-serif; }
+  .reveal .slides section { text-align: left; padding: 0 40px; }
+  .reveal h1, .reveal h2, .reveal h3 { font-weight: 700; text-transform: none; letter-spacing: -0.5px; }
+  .reveal h1 { font-size: 2.4em; }
+  .reveal h2 { font-size: 1.6em; color: var(--blue); border-bottom: 2px solid var(--blue); padding-bottom: 10px; margin-bottom: 30px; }
+  .reveal h3 { font-size: 1em; color: var(--cyan); margin-bottom: 8px; }
+  .reveal p, .reveal li { font-size: 0.72em; color: var(--text); line-height: 1.6; }
+  .reveal ul { list-style: none; padding: 0; }
+  .reveal ul li::before { content: "▸ "; color: var(--blue); font-weight: bold; }
+  .reveal code { background: #0f172a; color: var(--cyan); padding: 2px 8px; border-radius: 4px; font-size: 0.85em; border: 1px solid var(--border); }
+
+  /* ─── LAYOUT ─── */
+  .grid-2   { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+  .grid-3   { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; }
+  .grid-4   { display: grid; grid-template-columns: repeat(4,1fr); gap: 14px; }
+
+  /* ─── CARDS ─── */
+  .card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 18px 20px;
+  }
+  .card-blue   { border-left: 4px solid var(--blue); }
+  .card-purple { border-left: 4px solid var(--purple); }
+  .card-cyan   { border-left: 4px solid var(--cyan); }
+  .card-green  { border-left: 4px solid var(--green); }
+  .card-orange { border-left: 4px solid var(--orange); }
+
+  /* ─── BADGES ─── */
+  .badge {
+    display: inline-block;
+    padding: 3px 10px;
+    border-radius: 99px;
+    font-size: 0.58em;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  .badge-blue   { background: rgba(59,130,246,0.2);  color: var(--blue);   border: 1px solid var(--blue); }
+  .badge-purple { background: rgba(139,92,246,0.2);  color: var(--purple); border: 1px solid var(--purple); }
+  .badge-cyan   { background: rgba(6,182,212,0.2);   color: var(--cyan);   border: 1px solid var(--cyan); }
+  .badge-green  { background: rgba(16,185,129,0.2);  color: var(--green);  border: 1px solid var(--green); }
+  .badge-orange { background: rgba(245,158,11,0.2);  color: var(--orange); border: 1px solid var(--orange); }
+  .badge-red    { background: rgba(239,68,68,0.2);   color: var(--red);    border: 1px solid var(--red); }
+
+  /* ─── STAT BOXES ─── */
+  .stat { text-align: center; padding: 16px; background: var(--card); border-radius: 10px; border: 1px solid var(--border); }
+  .stat-num { font-size: 1.8em; font-weight: 800; display: block; }
+  .stat-lbl { font-size: 0.58em; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; }
+
+  /* ─── ARCHITECTURE DIAGRAMS ─── */
+  .arch-box {
+    border: 2px solid var(--border);
+    border-radius: 8px;
+    padding: 10px 14px;
+    font-size: 0.6em;
+    text-align: center;
+    background: var(--card);
+    font-weight: 600;
+  }
+  .arch-arrow { text-align: center; color: var(--muted); font-size: 1.2em; line-height: 1; }
+  .arch-flow  { display: flex; align-items: center; gap: 8px; justify-content: center; flex-wrap: wrap; }
+  .arch-flow .arch-box { min-width: 100px; }
+  .arch-flow .arrow { color: var(--blue); font-size: 1em; font-weight: bold; }
+
+  .pod-container {
+    border: 2px dashed var(--border);
+    border-radius: 12px;
+    padding: 14px;
+    position: relative;
+  }
+  .pod-label {
+    position: absolute;
+    top: -10px;
+    left: 12px;
+    background: var(--dark);
+    padding: 0 8px;
+    font-size: 0.5em;
+    color: var(--muted);
+    font-weight: 700;
+    text-transform: uppercase;
+  }
+  .container-box {
+    background: rgba(59,130,246,0.1);
+    border: 1px solid var(--blue);
+    border-radius: 6px;
+    padding: 8px 12px;
+    font-size: 0.58em;
+    text-align: center;
+    font-weight: 600;
+  }
+  .container-box.mongodb { background: rgba(16,185,129,0.1); border-color: var(--green); }
+
+  /* ─── STEP NUMBERS ─── */
+  .step { display: flex; gap: 14px; align-items: flex-start; margin-bottom: 12px; }
+  .step-num {
+    background: var(--blue);
+    color: white;
+    width: 26px; height: 26px;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 0.6em;
+    font-weight: 800;
+    flex-shrink: 0;
+    margin-top: 2px;
+  }
+  .step-content { font-size: 0.68em; line-height: 1.5; }
+  .step-content strong { color: var(--cyan); }
+
+  /* ─── ISSUE/SOLUTION ROWS ─── */
+  .issue-row { display: flex; gap: 12px; align-items: flex-start; margin-bottom: 10px; }
+  .issue-icon { font-size: 1em; flex-shrink: 0; margin-top: 2px; }
+  .issue-text { font-size: 0.65em; line-height: 1.5; }
+  .issue-text strong { color: var(--orange); }
+  .sol-text  { font-size: 0.65em; line-height: 1.5; }
+  .sol-text strong { color: var(--green); }
+
+  /* ─── TITLE SLIDE ─── */
+  .title-slide { text-align: center !important; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; }
+  .title-slide .logo { font-size: 3.5em; margin-bottom: 10px; }
+  .title-slide h1 { font-size: 3em; background: linear-gradient(135deg, var(--blue), var(--purple)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+  .title-slide .subtitle { font-size: 0.9em; color: var(--muted); margin: 10px 0 30px; }
+  .title-slide .meta { font-size: 0.65em; color: var(--muted); }
+  .title-slide .school { font-size: 0.8em; color: var(--cyan); font-weight: 600; }
+
+  /* ─── TECH ICONS ─── */
+  .tech-icon { text-align: center; }
+  .tech-icon .icon { font-size: 1.8em; margin-bottom: 6px; display: block; }
+  .tech-icon p { font-size: 0.55em !important; color: var(--muted); margin-top: 4px; }
+  .tech-icon strong { font-size: 0.68em; display: block; color: var(--text); }
+
+  /* ─── YAML CODE BLOCK ─── */
+  .yaml-block {
+    background: #020817;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 14px 16px;
+    font-family: 'Consolas', monospace;
+    font-size: 0.52em;
+    line-height: 1.6;
+    overflow: hidden;
+  }
+  .yaml-block .kw  { color: #7dd3fc; }
+  .yaml-block .val { color: #86efac; }
+  .yaml-block .cmt { color: #475569; }
+  .yaml-block .str { color: #fca5a5; }
+
+  /* ─── FINAL SLIDE ─── */
+  .final-slide { text-align: center !important; }
+  .final-slide h1 { font-size: 2.2em; color: var(--text); }
+  .final-slide .big-icon { font-size: 4em; margin: 20px 0; display: block; }
+  .final-slide .github { color: var(--cyan); font-size: 0.7em; }
+
+  /* ─── PROGRESS BAR ─── */
+  .reveal .progress { color: var(--blue); }
+  .reveal .slide-number { font-size: 0.55em; }
+
+  /* ─── RESPONSIVE ─── */
+  @media (max-width: 800px) {
+    .grid-2, .grid-3, .grid-4 { grid-template-columns: 1fr; }
+  }
+
+  /* ─── HIGHLIGHT LINE ─── */
+  .hl { color: var(--cyan); font-weight: 700; }
+  .tag-row { display: flex; gap: 8px; flex-wrap: wrap; margin: 6px 0; }
+
+  /* ─── TABLE ─── */
+  .reveal table { font-size: 0.6em; width: 100%; border-collapse: collapse; }
+  .reveal table th { background: var(--card); color: var(--cyan); padding: 8px 12px; border-bottom: 2px solid var(--blue); text-align: left; font-size: 0.9em; }
+  .reveal table td { padding: 7px 12px; border-bottom: 1px solid var(--border); color: var(--text); }
+  .reveal table tr:hover td { background: rgba(59,130,246,0.05); }
+</style>
+</head>
+<body>
+<div class="reveal">
+<div class="slides">
+
+<!-- ══════════════════════════════════════════════════════════════ -->
+<!-- SLIDE 1 — TITRE -->
+<!-- ══════════════════════════════════════════════════════════════ -->
+<section>
+  <div class="title-slide">
+    <div class="logo">🏍️</div>
+    <h1>MotoShop</h1>
+    <p class="subtitle">Plateforme e-commerce déployée sur Kubernetes</p>
+    <div style="display:flex;gap:12px;justify-content:center;margin:18px 0;">
+      <span class="badge badge-blue"><i class="fab fa-docker"></i> Docker</span>
+      <span class="badge badge-cyan">☸ Kubernetes</span>
+      <span class="badge badge-purple">⚛ React</span>
+      <span class="badge badge-green">🐍 Flask</span>
+      <span class="badge badge-orange">🍃 MongoDB</span>
+    </div>
+    <p class="school">Projet DevOps — BTS / BUT / Licence Informatique</p>
+    <p class="meta" style="margin-top:14px;">Alexandra Assaga &nbsp;·&nbsp; Juin 2026</p>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════════════════════════ -->
+<!-- SLIDE 2 — ÉQUIPE -->
+<!-- ══════════════════════════════════════════════════════════════ -->
+<section>
+  <h2><i class="fa fa-users" style="color:var(--blue);margin-right:10px;"></i>Présentation de l'équipe</h2>
+  <div class="grid-2" style="margin-top:10px;">
+    <div class="card card-blue">
+      <div style="display:flex;align-items:center;gap:14px;margin-bottom:12px;">
+        <div style="width:48px;height:48px;border-radius:50%;background:linear-gradient(135deg,var(--blue),var(--purple));display:flex;align-items:center;justify-content:center;font-size:1.4em;">👩‍💻</div>
+        <div>
+          <h3 style="margin:0;">Alexandra Assaga</h3>
+          <span class="badge badge-blue">Lead DevOps</span>
+        </div>
+      </div>
+      <ul>
+        <li>Architecture Kubernetes & Docker</li>
+        <li>Développement Backend (Flask/MongoDB)</li>
+        <li>Développement Frontend (React/Vite)</li>
+        <li>Pipeline CI/CD & scripts d'automatisation</li>
+      </ul>
+    </div>
+    <div>
+      <div class="card card-purple" style="margin-bottom:14px;">
+        <h3><i class="fa fa-list-check" style="margin-right:6px;"></i>Répartition des tâches</h3>
+        <table>
+          <tr><th>Domaine</th><th>Tâche</th></tr>
+          <tr><td>Backend</td><td>API Flask + MongoDB</td></tr>
+          <tr><td>Frontend</td><td>React + Nginx + Pages</td></tr>
+          <tr><td>Docker</td><td>Images, Dockerfiles</td></tr>
+          <tr><td>Kubernetes</td><td>Manifests YAML</td></tr>
+          <tr><td>CI/CD</td><td>Hook git + scripts</td></tr>
+        </table>
+      </div>
+      <div class="card card-cyan">
+        <h3><i class="fa fa-code-branch" style="margin-right:6px;"></i>Dépôt GitHub</h3>
+        <p style="font-family:monospace;color:var(--cyan);">github.com/aassaga21/MotoShop</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════════════════════════ -->
+<!-- SLIDE 3 — CONTEXTE & OBJECTIFS -->
+<!-- ══════════════════════════════════════════════════════════════ -->
+<section>
+  <h2><i class="fa fa-bullseye" style="color:var(--blue);margin-right:10px;"></i>Contexte & Objectifs</h2>
+  <div class="grid-3">
+    <div class="card card-orange">
+      <h3>🎯 Problématique</h3>
+      <ul>
+        <li>Déployer une application web e-commerce complète</li>
+        <li>Garantir la <span class="hl">persistance des données</span></li>
+        <li>Assurer la <span class="hl">reproductibilité</span> du déploiement</li>
+        <li>Automatiser les mises à jour</li>
+      </ul>
+    </div>
+    <div class="card card-blue">
+      <h3>🛒 Objectifs fonctionnels</h3>
+      <ul>
+        <li>Catalogue de 12 motos avec filtres</li>
+        <li>Fiche produit détaillée</li>
+        <li>Panier & formulaire de commande</li>
+        <li>Page Contact (formulaire)</li>
+        <li>Dashboard Admin (commandes, clients)</li>
+      </ul>
+    </div>
+    <div class="card card-cyan">
+      <h3>⚙️ Objectifs techniques</h3>
+      <ul>
+        <li>Conteneurisation avec <span class="hl">Docker</span></li>
+        <li>Orchestration avec <span class="hl">Kubernetes</span></li>
+        <li>Persistance avec <span class="hl">PVC/PV</span></li>
+        <li>Gestion des secrets K8s</li>
+        <li>Pipeline <span class="hl">CI/CD</span> automatisé</li>
+      </ul>
+    </div>
+  </div>
+  <div class="grid-4" style="margin-top:18px;">
+    <div class="stat"><span class="stat-num" style="color:var(--blue);">12</span><span class="stat-lbl">Motos</span></div>
+    <div class="stat"><span class="stat-num" style="color:var(--purple);">2</span><span class="stat-lbl">Pods K8s</span></div>
+    <div class="stat"><span class="stat-num" style="color:var(--cyan);">5</span><span class="stat-lbl">Routes API</span></div>
+    <div class="stat"><span class="stat-num" style="color:var(--green);">4</span><span class="stat-lbl">Pages React</span></div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════════════════════════ -->
+<!-- SLIDE 4 — ARCHITECTURE GLOBALE -->
+<!-- ══════════════════════════════════════════════════════════════ -->
+<section>
+  <h2><i class="fa fa-network-wired" style="color:var(--blue);margin-right:10px;"></i>Architecture Globale</h2>
+  <div style="background:var(--card);border:1px solid var(--border);border-radius:12px;padding:20px;margin-top:8px;">
+    <!-- User -->
+    <div style="text-align:center;margin-bottom:12px;">
+      <div class="arch-box" style="display:inline-block;border-color:var(--muted);min-width:140px;">👤 Navigateur utilisateur<br/><span style="color:var(--muted);font-size:0.85em;">http://localhost:30080</span></div>
+    </div>
+    <div class="arch-arrow">⬇ NodePort 30080</div>
+    <!-- POD 1 -->
+    <div class="pod-container" style="border-color:var(--blue);margin:8px 0;">
+      <div class="pod-label" style="color:var(--blue);">POD 1 — Frontend (Namespace: ecommerce)</div>
+      <div style="text-align:center;">
+        <div class="arch-box" style="display:inline-block;border-color:var(--blue);min-width:280px;background:rgba(59,130,246,0.08);">
+          🌐 <strong>Nginx + React 18</strong><br/>
+          <span style="color:var(--muted);font-size:0.85em;">Build statique Vite · Port 80</span><br/>
+          <span style="color:var(--cyan);font-size:0.75em;">Proxy /api/ → backend-service:5000</span>
+        </div>
+      </div>
+    </div>
+    <div class="arch-arrow">⬇ ClusterIP · Service: backend-service:5000</div>
+    <!-- POD 2 -->
+    <div class="pod-container" style="border-color:var(--green);margin:8px 0;">
+      <div class="pod-label" style="color:var(--green);">POD 2 — Backend + Base de données</div>
+      <div style="display:flex;gap:16px;justify-content:center;align-items:center;">
+        <div class="arch-box" style="border-color:var(--purple);background:rgba(139,92,246,0.08);min-width:160px;">🐍 <strong>Flask API</strong><br/><span style="font-size:0.85em;color:var(--muted);">Port 5000 · Python 3.12</span></div>
+        <div style="color:var(--muted);font-size:1.2em;">⟺</div>
+        <div class="arch-box" style="border-color:var(--green);background:rgba(16,185,129,0.08);min-width:160px;">🍃 <strong>MongoDB 7.0</strong><br/><span style="font-size:0.85em;color:var(--muted);">Port 27017 · PVC /data/db</span></div>
+      </div>
+    </div>
+    <!-- Secrets/Config -->
+    <div style="display:flex;gap:10px;margin-top:12px;justify-content:center;">
+      <div class="arch-box" style="border-color:var(--orange);font-size:0.55em;padding:6px 14px;">🔐 Secret K8s<br/>mongouser / MongoPass2024</div>
+      <div class="arch-box" style="border-color:var(--cyan);font-size:0.55em;padding:6px 14px;">⚙ ConfigMap<br/>MONGO_HOST · DB_NAME</div>
+      <div class="arch-box" style="border-color:var(--purple);font-size:0.55em;padding:6px 14px;">💾 PV / PVC<br/>1Gi · /data/db</div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════════════════════════ -->
+<!-- SLIDE 5 — ARCHITECTURE DOCKER -->
+<!-- ══════════════════════════════════════════════════════════════ -->
+<section>
+  <h2><i class="fab fa-docker" style="color:var(--blue);margin-right:10px;"></i>Architecture Docker</h2>
+  <div class="grid-2">
+    <div>
+      <div class="card card-blue" style="margin-bottom:14px;">
+        <h3>🌐 Image Frontend</h3>
+        <span class="badge badge-blue">alexandraassaga/moto-frontend:latest</span>
+        <ul style="margin-top:10px;">
+          <li><strong>Base :</strong> node:20-alpine → nginx:alpine</li>
+          <li><strong>Build :</strong> <code>npm run build</code> → Vite</li>
+          <li><strong>Multi-stage</strong> pour optimiser la taille</li>
+          <li><strong>Sert :</strong> SPA React + images statiques</li>
+          <li><strong>Port exposé :</strong> 80</li>
+        </ul>
+      </div>
+      <div class="card card-green">
+        <h3>🐍 Image Backend</h3>
+        <span class="badge badge-green">alexandraassaga/moto-backend:latest</span>
+        <ul style="margin-top:10px;">
+          <li><strong>Base :</strong> python:3.12-slim</li>
+          <li><strong>Contient :</strong> Flask, PyMongo, Flask-CORS</li>
+          <li><strong>Port exposé :</strong> 5000</li>
+          <li><strong>Démarrage :</strong> <code>python app.py</code></li>
+        </ul>
+      </div>
+    </div>
+    <div>
+      <div class="card card-orange" style="margin-bottom:14px;">
+        <h3>💾 Volumes & Persistance</h3>
+        <div style="background:#020817;border-radius:6px;padding:10px;font-family:monospace;font-size:0.55em;margin-top:8px;">
+          <div style="color:#7dd3fc;">volumes:</div>
+          <div style="color:#86efac;padding-left:12px;">- name: mongo-data</div>
+          <div style="color:#f1f5f9;padding-left:24px;">persistentVolumeClaim:</div>
+          <div style="color:#fca5a5;padding-left:36px;">claimName: mongo-pvc</div>
+          <div style="color:#94a3b8;padding-left:12px;"># montage: /data/db</div>
+          <div style="color:#94a3b8;padding-left:12px;"># capacité: 1Gi</div>
+        </div>
+      </div>
+      <div class="card card-purple">
+        <h3>✅ Avantages de la conteneurisation</h3>
+        <ul>
+          <li>Isolation des dépendances</li>
+          <li>Reproductibilité garantie</li>
+          <li>Déploiement identique Dev/Prod</li>
+          <li>Images versionées sur Docker Hub</li>
+          <li>Mise à l'échelle simplifiée</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════════════════════════ -->
+<!-- SLIDE 6 — CHOIX TECHNIQUES -->
+<!-- ══════════════════════════════════════════════════════════════ -->
+<section>
+  <h2><i class="fa fa-gear" style="color:var(--blue);margin-right:10px;"></i>Choix Techniques</h2>
+  <div class="grid-3">
+    <div class="tech-icon card card-blue">
+      <span class="icon">🐳</span>
+      <strong>Docker</strong>
+      <p>Conteneurisation · Portabilité · Isolation des services · Images reproductibles</p>
+    </div>
+    <div class="tech-icon card card-cyan">
+      <span class="icon">☸️</span>
+      <strong>Kubernetes</strong>
+      <p>Orchestration · Self-healing · Rolling restarts · Gestion des ressources</p>
+    </div>
+    <div class="tech-icon card card-green">
+      <span class="icon">🍃</span>
+      <strong>MongoDB 7.0</strong>
+      <p>NoSQL flexible · Schéma dynamique · Adapté aux données produits/commandes</p>
+    </div>
+    <div class="tech-icon card card-purple">
+      <span class="icon">⚛️</span>
+      <strong>React 18 + Vite</strong>
+      <p>SPA moderne · Build ultra-rapide · Composants réutilisables</p>
+    </div>
+    <div class="tech-icon card card-orange">
+      <span class="icon">🐍</span>
+      <strong>Python Flask</strong>
+      <p>API REST légère · Intégration PyMongo native · Démarrage rapide</p>
+    </div>
+    <div class="tech-icon card" style="border-left:4px solid var(--muted);">
+      <span class="icon">🔐</span>
+      <strong>Secrets K8s</strong>
+      <p>Identifiants MongoDB encodés en base64 · Séparation config / code</p>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════════════════════════ -->
+<!-- SLIDE 7 — DÉMONSTRATION DOCKER -->
+<!-- ══════════════════════════════════════════════════════════════ -->
+<section>
+  <h2><i class="fab fa-docker" style="color:var(--blue);margin-right:10px;"></i>Démonstration Docker</h2>
+  <div class="grid-2">
+    <div>
+      <div class="card card-blue" style="margin-bottom:14px;">
+        <h3>📦 Conteneurs en production</h3>
+        <table>
+          <tr><th>Conteneur</th><th>Image</th><th>Port</th></tr>
+          <tr><td>flask</td><td>moto-backend</td><td>5000</td></tr>
+          <tr><td>mongodb</td><td>mongo:7.0</td><td>27017</td></tr>
+          <tr><td>frontend</td><td>moto-frontend</td><td>80</td></tr>
+        </table>
+      </div>
+      <div class="card card-green">
+        <h3>🔗 Communication inter-conteneurs</h3>
+        <div class="arch-flow" style="font-size:0.8em;">
+          <div class="arch-box" style="border-color:var(--blue);">Nginx<br/>:80</div>
+          <span class="arrow">→ /api/</span>
+          <div class="arch-box" style="border-color:var(--purple);">Flask<br/>:5000</div>
+          <span class="arrow">→</span>
+          <div class="arch-box" style="border-color:var(--green);">MongoDB<br/>:27017</div>
+        </div>
+        <p style="margin-top:10px;color:var(--muted);">Flask et MongoDB partagent le même pod → communication via <code>localhost</code></p>
+      </div>
+    </div>
+    <div>
+      <h3 style="color:var(--cyan);margin-bottom:8px;">💻 Commandes Docker utilisées</h3>
+      <div class="yaml-block">
+        <span class="cmt"># Build de l'image backend</span><br/>
+        <span class="kw">docker build</span> <span class="val">-t alexandraassaga/moto-backend:latest</span> ./backend<br/><br/>
+        <span class="cmt"># Push sur Docker Hub</span><br/>
+        <span class="kw">docker push</span> <span class="val">alexandraassaga/moto-backend:latest</span><br/><br/>
+        <span class="cmt"># Build multi-stage frontend</span><br/>
+        <span class="kw">docker build</span> <span class="val">-t alexandraassaga/moto-frontend:latest</span> ./frontend<br/><br/>
+        <span class="cmt"># Vérifier les images</span><br/>
+        <span class="kw">docker images</span> <span class="val">| grep moto</span><br/><br/>
+        <span class="cmt"># Logs d'un conteneur K8s</span><br/>
+        <span class="kw">kubectl logs</span> <span class="val">deployment/backend -c flask -n ecommerce</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════════════════════════ -->
+<!-- SLIDE 8 — CLUSTER KUBERNETES -->
+<!-- ══════════════════════════════════════════════════════════════ -->
+<section>
+  <h2><span style="margin-right:10px;">☸️</span>Architecture du Cluster Kubernetes</h2>
+  <div class="grid-2">
+    <div>
+      <div class="card card-cyan" style="margin-bottom:14px;">
+        <h3>🖥️ Environnement</h3>
+        <ul>
+          <li><strong>Cluster :</strong> Docker Desktop (single-node)</li>
+          <li><strong>Version K8s :</strong> 1.34</li>
+          <li><strong>Namespace :</strong> <code>ecommerce</code></li>
+          <li><strong>Nœud :</strong> <code>docker-desktop</code></li>
+          <li><strong>IP nœud :</strong> 192.168.65.3</li>
+        </ul>
+      </div>
+      <div class="card card-purple">
+        <h3>📊 Ressources allouées</h3>
+        <table>
+          <tr><th>Conteneur</th><th>RAM</th><th>CPU</th></tr>
+          <tr><td>flask</td><td>128–256 Mi</td><td>100–300m</td></tr>
+          <tr><td>mongodb</td><td>256–512 Mi</td><td>200–500m</td></tr>
+          <tr><td>frontend</td><td>64–128 Mi</td><td>50–100m</td></tr>
+        </table>
+      </div>
+    </div>
+    <div>
+      <div class="card card-blue">
+        <h3>🏗️ Objets Kubernetes déployés</h3>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px;">
+          <div style="background:rgba(59,130,246,0.1);border:1px solid var(--blue);border-radius:6px;padding:8px;font-size:0.55em;text-align:center;"><strong>Deployment</strong><br/>backend · frontend</div>
+          <div style="background:rgba(6,182,212,0.1);border:1px solid var(--cyan);border-radius:6px;padding:8px;font-size:0.55em;text-align:center;"><strong>Service</strong><br/>ClusterIP · NodePort</div>
+          <div style="background:rgba(139,92,246,0.1);border:1px solid var(--purple);border-radius:6px;padding:8px;font-size:0.55em;text-align:center;"><strong>ConfigMap</strong><br/>app-config</div>
+          <div style="background:rgba(245,158,11,0.1);border:1px solid var(--orange);border-radius:6px;padding:8px;font-size:0.55em;text-align:center;"><strong>Secret</strong><br/>mongo-secret</div>
+          <div style="background:rgba(16,185,129,0.1);border:1px solid var(--green);border-radius:6px;padding:8px;font-size:0.55em;text-align:center;"><strong>PersistentVolume</strong><br/>mongo-pv · 1Gi</div>
+          <div style="background:rgba(16,185,129,0.1);border:1px solid var(--green);border-radius:6px;padding:8px;font-size:0.55em;text-align:center;"><strong>PVC</strong><br/>mongo-pvc · RWO</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════════════════════════ -->
+<!-- SLIDE 9 — DÉPLOIEMENT KUBERNETES -->
+<!-- ══════════════════════════════════════════════════════════════ -->
+<section>
+  <h2><span style="margin-right:10px;">📄</span>Déploiement Kubernetes — Manifests YAML</h2>
+  <div class="grid-2">
+    <div class="yaml-block">
+      <span class="cmt"># backend-deployment.yaml (extrait)</span><br/>
+      <span class="kw">apiVersion:</span> <span class="val">apps/v1</span><br/>
+      <span class="kw">kind:</span> <span class="val">Deployment</span><br/>
+      <span class="kw">spec:</span><br/>
+      &nbsp;&nbsp;<span class="kw">replicas:</span> <span class="val">1</span><br/>
+      &nbsp;&nbsp;<span class="kw">strategy:</span><br/>
+      &nbsp;&nbsp;&nbsp;&nbsp;<span class="kw">type:</span> <span class="str">Recreate</span> <span class="cmt"># ← crucial</span><br/>
+      &nbsp;&nbsp;<span class="kw">containers:</span><br/>
+      &nbsp;&nbsp;<span class="val">- name: flask</span><br/>
+      &nbsp;&nbsp;&nbsp;&nbsp;<span class="kw">image:</span> <span class="val">alexandraassaga/moto-backend</span><br/>
+      &nbsp;&nbsp;&nbsp;&nbsp;<span class="kw">resources:</span><br/>
+      &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="kw">limits:</span><br/>
+      &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="kw">memory:</span> <span class="val">"256Mi"</span><br/>
+      &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="kw">cpu:</span> <span class="val">"300m"</span><br/>
+      &nbsp;&nbsp;<span class="val">- name: mongodb</span><br/>
+      &nbsp;&nbsp;&nbsp;&nbsp;<span class="kw">image:</span> <span class="val">mongo:7.0</span><br/>
+      &nbsp;&nbsp;&nbsp;&nbsp;<span class="kw">volumeMounts:</span><br/>
+      &nbsp;&nbsp;&nbsp;&nbsp;<span class="val">- mountPath: /data/db</span>
+    </div>
+    <div>
+      <div class="card card-orange" style="margin-bottom:12px;">
+        <h3>🔐 ConfigMap & Secrets</h3>
+        <div class="yaml-block" style="margin-top:6px;">
+          <span class="cmt"># secret.yaml</span><br/>
+          <span class="kw">kind:</span> <span class="val">Secret</span><br/>
+          <span class="kw">data:</span><br/>
+          &nbsp;&nbsp;<span class="kw">MONGO_USERNAME:</span> <span class="val">bW9uZ291c2Vy</span><br/>
+          &nbsp;&nbsp;<span class="kw">MONGO_PASSWORD:</span> <span class="val">TW9uZ29QYXNz...</span>
+        </div>
+      </div>
+      <div class="card card-green">
+        <h3>💾 PersistentVolumeClaim</h3>
+        <div class="yaml-block" style="margin-top:6px;">
+          <span class="kw">kind:</span> <span class="val">PersistentVolumeClaim</span><br/>
+          <span class="kw">spec:</span><br/>
+          &nbsp;&nbsp;<span class="kw">accessModes:</span><br/>
+          &nbsp;&nbsp;<span class="val">- ReadWriteOnce</span><br/>
+          &nbsp;&nbsp;<span class="kw">resources.requests:</span><br/>
+          &nbsp;&nbsp;&nbsp;&nbsp;<span class="kw">storage:</span> <span class="val">1Gi</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════════════════════════ -->
+<!-- SLIDE 10 — PODS & SERVICES -->
+<!-- ══════════════════════════════════════════════════════════════ -->
+<section>
+  <h2><span style="margin-right:10px;">🔌</span>Pods & Services Kubernetes</h2>
+  <div class="grid-2" style="margin-bottom:16px;">
+    <div class="pod-container" style="border-color:var(--blue);">
+      <div class="pod-label" style="color:var(--blue);">POD — frontend</div>
+      <div class="container-box">🌐 nginx:alpine<br/><span style="color:var(--muted);">Port 80 · SPA React</span></div>
+    </div>
+    <div class="pod-container" style="border-color:var(--purple);">
+      <div class="pod-label" style="color:var(--purple);">POD — backend (2 conteneurs)</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+        <div class="container-box">🐍 Flask<br/><span style="color:var(--muted);">Port 5000</span></div>
+        <div class="container-box mongodb">🍃 MongoDB<br/><span style="color:var(--muted);">Port 27017</span></div>
+      </div>
+    </div>
+  </div>
+  <div class="grid-2">
+    <div class="card card-cyan">
+      <h3>🔗 Services exposés</h3>
+      <table>
+        <tr><th>Service</th><th>Type</th><th>Port</th></tr>
+        <tr><td>frontend-service</td><td><span class="badge badge-orange">NodePort</span></td><td>30080 → 80</td></tr>
+        <tr><td>backend-service</td><td><span class="badge badge-cyan">ClusterIP</span></td><td>5000 → 5000</td></tr>
+      </table>
+    </div>
+    <div class="card card-purple">
+      <h3>📡 Découverte de services</h3>
+      <ul>
+        <li>Nginx proxifie <code>/api/</code> vers <code>backend-service:5000</code></li>
+        <li>Flask accède à MongoDB via <code>localhost:27017</code> (même pod)</li>
+        <li>Résolution DNS interne K8s : <code>service.namespace.svc.cluster.local</code></li>
+        <li>Accès externe : <code>http://localhost:30080</code></li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════════════════════════ -->
+<!-- SLIDE 11 — DÉMONSTRATION FONCTIONNELLE -->
+<!-- ══════════════════════════════════════════════════════════════ -->
+<section>
+  <h2><i class="fa fa-play-circle" style="color:var(--blue);margin-right:10px;"></i>Démonstration Fonctionnelle</h2>
+  <div class="grid-2">
+    <div>
+      <div class="step">
+        <div class="step-num">1</div>
+        <div class="step-content"><strong>Accès au catalogue</strong><br/>http://localhost:30080 — affichage de 12 motos avec filtres (Naked, Sport, Trail, Cruiser)</div>
+      </div>
+      <div class="step">
+        <div class="step-num">2</div>
+        <div class="step-content"><strong>Consultation fiche produit</strong><br/>Clic sur une moto → modal avec moteur, puissance, poids, vitesse max, prix</div>
+      </div>
+      <div class="step">
+        <div class="step-num">3</div>
+        <div class="step-content"><strong>Ajout au panier & commande</strong><br/>Panier sidebar → formulaire client → <code>POST /api/orders</code> → confirmation</div>
+      </div>
+      <div class="step">
+        <div class="step-num">4</div>
+        <div class="step-content"><strong>Page Contact</strong><br/>Formulaire → <code>POST /api/contact</code> → sauvegarde MongoDB</div>
+      </div>
+      <div class="step">
+        <div class="step-num">5</div>
+        <div class="step-content"><strong>Dashboard Admin ⚙</strong><br/>Stats CA · Gestion statuts commandes · Historique clients</div>
+      </div>
+    </div>
+    <div>
+      <div class="card card-blue" style="margin-bottom:12px;">
+        <h3>📡 Routes API Flask</h3>
+        <table>
+          <tr><th>Méthode</th><th>Route</th><th>Rôle</th></tr>
+          <tr><td><span class="badge badge-green">GET</span></td><td><code>/api/products</code></td><td>Catalogue</td></tr>
+          <tr><td><span class="badge badge-blue">POST</span></td><td><code>/api/orders</code></td><td>Commander</td></tr>
+          <tr><td><span class="badge badge-green">GET</span></td><td><code>/api/orders</code></td><td>Admin</td></tr>
+          <tr><td><span class="badge badge-orange">PATCH</span></td><td><code>/api/orders/:id/status</code></td><td>Statut</td></tr>
+          <tr><td><span class="badge badge-blue">POST</span></td><td><code>/api/contact</code></td><td>Message</td></tr>
+        </table>
+      </div>
+      <div class="card card-green">
+        <h3>✅ Test de persistance</h3>
+        <ul>
+          <li>Suppression du pod backend → recréation automatique</li>
+          <li>Données MongoDB conservées grâce au PVC</li>
+          <li>Seed automatique si collection vide</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════════════════════════ -->
+<!-- SLIDE 12 — DIFFICULTÉS RENCONTRÉES -->
+<!-- ══════════════════════════════════════════════════════════════ -->
+<section>
+  <h2><i class="fa fa-triangle-exclamation" style="color:var(--orange);margin-right:10px;"></i>Difficultés Rencontrées</h2>
+  <div class="grid-2">
+    <div>
+      <div class="issue-row">
+        <div class="issue-icon">🔒</div>
+        <div class="issue-text"><strong>Conflit mongod.lock (CrashLoopBackOff)</strong><br/>Deux pods montaient le même PVC simultanément lors d'un <code>rollout restart</code> → verrou bloqué</div>
+      </div>
+      <div class="issue-row">
+        <div class="issue-icon">💥</div>
+        <div class="issue-text"><strong>OOM Kill (exit code 137)</strong><br/>Lancer <code>mongosh</code> dans le conteneur MongoDB (512Mi) en plus de <code>mongod</code> dépassait la limite mémoire</div>
+      </div>
+      <div class="issue-row">
+        <div class="issue-icon">👤</div>
+        <div class="issue-text"><strong>User MongoDB inexistant (UserNotFound)</strong><br/>Les variables <code>MONGO_INITDB_*</code> ne fonctionnent que sur un volume <strong>entièrement vide</strong> — <code>rm -rf /data/db/*</code> ne supprime pas les fichiers cachés</div>
+      </div>
+    </div>
+    <div>
+      <div class="issue-row">
+        <div class="issue-icon">🖼️</div>
+        <div class="issue-text"><strong>Images motos invisibles</strong><br/>Noms de fichiers avec majuscules/espaces côté Windows, mais Linux est sensible à la casse → images non trouvées par Nginx</div>
+      </div>
+      <div class="issue-row">
+        <div class="issue-icon">🔗</div>
+        <div class="issue-text"><strong>Hook git installé au mauvais endroit</strong><br/>La racine git étant à <code>C:\Users\alexa\</code> (et non dans <code>k8s-demo/</code>), le hook était dans un <code>.git\</code> inexistant</div>
+      </div>
+      <div class="issue-row">
+        <div class="issue-icon">⏱️</div>
+        <div class="issue-text"><strong>Race condition au démarrage</strong><br/>Flask tentait de se connecter à MongoDB avant que celui-ci soit prêt → boucle d'échecs d'authentification</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════════════════════════ -->
+<!-- SLIDE 13 — SOLUTIONS APPORTÉES -->
+<!-- ══════════════════════════════════════════════════════════════ -->
+<section>
+  <h2><i class="fa fa-circle-check" style="color:var(--green);margin-right:10px;"></i>Solutions Apportées</h2>
+  <div class="grid-2">
+    <div>
+      <div class="issue-row">
+        <div class="issue-icon" style="color:var(--green);">✅</div>
+        <div class="sol-text"><strong>strategy: Recreate</strong><br/>Ajouté dans le Deployment backend → l'ancien pod est supprimé <em>avant</em> que le nouveau démarre, libérant le PVC</div>
+      </div>
+      <div class="issue-row">
+        <div class="issue-icon" style="color:var(--green);">✅</div>
+        <div class="sol-text"><strong>Bypass via container Flask</strong><br/>Au lieu de <code>mongosh</code>, utilisation de <code>python3 -c</code> avec PyMongo déjà chargé → aucune mémoire supplémentaire consommée</div>
+      </div>
+      <div class="issue-row">
+        <div class="issue-icon" style="color:var(--green);">✅</div>
+        <div class="sol-text"><strong>Création manuelle de l'utilisateur MongoDB</strong><br/>Pod temporaire avec <code>mongod --noauth</code> + <code>getSiblingDB('admin').createUser()</code> via mongosh</div>
+      </div>
+    </div>
+    <div>
+      <div class="issue-row">
+        <div class="issue-icon" style="color:var(--green);">✅</div>
+        <div class="sol-text"><strong>Convention de nommage kebab-case</strong><br/>Renommage des images en minuscules sans espaces (<code>bmw-r1250gs.jpg</code>) + rebuild de l'image Docker frontend</div>
+      </div>
+      <div class="issue-row">
+        <div class="issue-icon" style="color:var(--green);">✅</div>
+        <div class="sol-text"><strong>Détection automatique de la racine git</strong><br/><code>git rev-parse --show-toplevel</code> dans le script d'installation pour trouver le bon dossier <code>.git/hooks/</code></div>
+      </div>
+      <div class="issue-row">
+        <div class="issue-icon" style="color:var(--green);">✅</div>
+        <div class="sol-text"><strong>Wipe complet avec find</strong><br/><code>find /data/db -mindepth 1 -delete</code> au lieu de <code>rm -rf *</code> pour supprimer également les fichiers cachés</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════════════════════════ -->
+<!-- SLIDE 14 — BILAN DU PROJET -->
+<!-- ══════════════════════════════════════════════════════════════ -->
+<section>
+  <h2><i class="fa fa-chart-bar" style="color:var(--blue);margin-right:10px;"></i>Bilan du Projet</h2>
+  <div class="grid-3" style="margin-bottom:18px;">
+    <div class="card card-green">
+      <h3>🎯 Objectifs atteints</h3>
+      <ul>
+        <li>Application e-commerce fonctionnelle</li>
+        <li>Déploiement K8s stable (2/2 pods)</li>
+        <li>Persistance MongoDB validée</li>
+        <li>CI/CD via hook git automatisé</li>
+        <li>Pages Contact & Admin opérationnelles</li>
+      </ul>
+    </div>
+    <div class="card card-blue">
+      <h3>📚 Compétences acquises</h3>
+      <ul>
+        <li>Conteneurisation Docker avancée</li>
+        <li>Orchestration Kubernetes</li>
+        <li>Gestion Secrets/ConfigMaps</li>
+        <li>Débogage de pods en production</li>
+        <li>Automatisation CI/CD locale</li>
+      </ul>
+    </div>
+    <div class="card card-purple">
+      <h3>💡 Valeur ajoutée</h3>
+      <ul>
+        <li>Architecture microservices réelle</li>
+        <li>Pattern sidecar MongoDB+Flask</li>
+        <li>Workflow DevOps complet</li>
+        <li>Documentation exhaustive</li>
+        <li>Code versioné sur GitHub</li>
+      </ul>
+    </div>
+  </div>
+  <div class="grid-4">
+    <div class="stat"><span class="stat-num" style="color:var(--green);">100%</span><span class="stat-lbl">Pods Running</span></div>
+    <div class="stat"><span class="stat-num" style="color:var(--blue);">9</span><span class="stat-lbl">Manifests YAML</span></div>
+    <div class="stat"><span class="stat-num" style="color:var(--purple);">5</span><span class="stat-lbl">Routes API</span></div>
+    <div class="stat"><span class="stat-num" style="color:var(--cyan);">Auto</span><span class="stat-lbl">CI/CD</span></div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════════════════════════ -->
+<!-- SLIDE 15 — PERSPECTIVES D'AMÉLIORATION -->
+<!-- ══════════════════════════════════════════════════════════════ -->
+<section>
+  <h2><i class="fa fa-rocket" style="color:var(--blue);margin-right:10px;"></i>Perspectives d'Amélioration</h2>
+  <div class="grid-3">
+    <div class="card card-blue">
+      <h3>🔄 CI/CD avancé</h3>
+      <ul>
+        <li>Runner GitHub Actions cloud</li>
+        <li>Tests automatisés (Pytest, Jest)</li>
+        <li>Analyse de qualité (SonarQube)</li>
+        <li>Versionning sémantique des images</li>
+      </ul>
+    </div>
+    <div class="card card-orange">
+      <h3>📊 Monitoring</h3>
+      <ul>
+        <li>Prometheus + Grafana</li>
+        <li>Alerting sur les pods</li>
+        <li>Métriques MongoDB</li>
+        <li>Logs centralisés (ELK Stack)</li>
+      </ul>
+    </div>
+    <div class="card card-cyan">
+      <h3>📈 Scalabilité</h3>
+      <ul>
+        <li>Horizontal Pod Autoscaler (HPA)</li>
+        <li>MongoDB ReplicaSet</li>
+        <li>Cluster multi-nœuds</li>
+        <li>Load balancer Ingress (Nginx)</li>
+      </ul>
+    </div>
+    <div class="card card-red" style="border-left-color:var(--red);">
+      <h3>🔐 Sécurité</h3>
+      <ul>
+        <li>HTTPS / TLS (cert-manager)</li>
+        <li>Authentification JWT</li>
+        <li>Network Policies K8s</li>
+        <li>Vault pour les secrets</li>
+      </ul>
+    </div>
+    <div class="card card-purple">
+      <h3>☁️ Cloud</h3>
+      <ul>
+        <li>Déploiement GKE / EKS / AKS</li>
+        <li>Infrastructure as Code (Terraform)</li>
+        <li>CDN pour les assets statiques</li>
+        <li>Backup MongoDB automatisé</li>
+      </ul>
+    </div>
+    <div class="card card-green">
+      <h3>🛠️ Fonctionnalités</h3>
+      <ul>
+        <li>Authentification utilisateurs</li>
+        <li>Paiement en ligne (Stripe)</li>
+        <li>Notifications email</li>
+        <li>Application mobile React Native</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════════════════════════ -->
+<!-- SLIDE FINALE — QUESTIONS -->
+<!-- ══════════════════════════════════════════════════════════════ -->
+<section>
+  <div class="final-slide" style="text-align:center;display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;">
+    <span class="big-icon">🙏</span>
+    <h1 style="font-size:2.4em;background:linear-gradient(135deg,var(--blue),var(--purple));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;">Merci pour votre attention</h1>
+    <p style="color:var(--muted);font-size:0.9em;margin:16px 0 30px;">Projet DevOps — MotoShop E-Commerce Kubernetes</p>
+
+    <div style="display:flex;gap:16px;justify-content:center;flex-wrap:wrap;margin-bottom:30px;">
+      <span class="badge badge-blue"><i class="fab fa-docker"></i> Docker</span>
+      <span class="badge badge-cyan">☸ Kubernetes</span>
+      <span class="badge badge-purple">⚛ React 18</span>
+      <span class="badge badge-green">🐍 Flask</span>
+      <span class="badge badge-orange">🍃 MongoDB</span>
+    </div>
+
+    <div class="card" style="max-width:460px;text-align:left;">
+      <h3 style="text-align:center;color:var(--cyan);margin-bottom:12px;">Ressources</h3>
+      <p style="font-family:monospace;font-size:0.62em;">
+        <i class="fab fa-github" style="color:var(--muted);margin-right:6px;"></i>
+        github.com/aassaga21/MotoShop
+      </p>
+      <p style="font-family:monospace;font-size:0.62em;margin-top:6px;">
+        <i class="fab fa-docker" style="color:var(--blue);margin-right:6px;"></i>
+        hub.docker.com/u/alexandraassaga
+      </p>
+    </div>
+
+    <div style="margin-top:36px;padding:20px 40px;background:var(--card);border:2px solid var(--blue);border-radius:12px;">
+      <p style="font-size:1.1em;font-weight:700;color:var(--text);margin:0;">❓ Questions du jury</p>
+    </div>
+  </div>
+</section>
+
+</div><!-- /slides -->
+</div><!-- /reveal -->
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/5.1.0/reveal.min.js"></script>
+<script>
+Reveal.initialize({
+  hash: true,
+  slideNumber: 'c/t',
+  progress: true,
+  controls: true,
+  center: false,
+  transition: 'slide',
+  transitionSpeed: 'fast',
+  backgroundTransition: 'fade',
+  width: 1280,
+  height: 720,
+  margin: 0.04,
+  minScale: 0.2,
+  maxScale: 2.0,
+  plugins: []
+});
+</script>
+</body>
+</html>

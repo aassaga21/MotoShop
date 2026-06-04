@@ -338,6 +338,66 @@ kubectl rollout status deployment/backend -n ecommerce
 
 ---
 
+## Monitoring
+
+### Architecture du pod de monitoring
+
+Un pod dédié contient 2 containers qui partagent le même réseau local :
+
+```
+monitoring-pod (Namespace: ecommerce)
+├── container: prometheus  (port 9090) → collecte les métriques K8s
+└── container: grafana     (port 3000) → dashboards de visualisation
+        ↕  communication via localhost (même pod)
+```
+
+| Container | Image | Port interne | NodePort |
+|-----------|-------|-------------|----------|
+| prometheus | prom/prometheus:v2.52.0 | 9090 | 30900 |
+| grafana | grafana/grafana:10.4.0 | 3000 | 30300 |
+
+### Déploiement
+
+```bash
+kubectl apply -f k8s/monitoring-configmap.yaml
+kubectl apply -f k8s/monitoring-pod.yaml
+kubectl apply -f k8s/monitoring-service.yaml
+
+# Vérifier (attendre 2/2 Running — téléchargement des images)
+kubectl get pod monitoring-pod -n ecommerce -w
+```
+
+### Accès
+
+```bash
+# Grafana (recommandé — port-forward)
+kubectl port-forward pod/monitoring-pod 3000:3000 -n ecommerce
+# → http://localhost:3000  (login : admin / admin123)
+
+# Prometheus
+kubectl port-forward pod/monitoring-pod 9090:9090 -n ecommerce
+# → http://localhost:9090
+```
+
+Dans Grafana, ajoute une datasource Prometheus avec l'URL `http://localhost:9090`.
+
+### Fichiers
+
+| Fichier | Rôle |
+|---------|------|
+| `k8s/monitoring-configmap.yaml` | Config Prometheus (scrape_interval, jobs) |
+| `k8s/monitoring-pod.yaml` | Pod multi-container Prometheus + Grafana |
+| `k8s/monitoring-service.yaml` | NodePort 30300 (Grafana) + 30900 (Prometheus) |
+
+### Logs
+
+```bash
+kubectl logs monitoring-pod -c prometheus -n ecommerce
+kubectl logs monitoring-pod -c grafana    -n ecommerce
+```
+
+---
+
 ## Pipeline CI/CD
 
 À chaque `git push` sur `main`, le pipeline GitHub Actions :
